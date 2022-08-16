@@ -83,11 +83,6 @@ builder.Services.AddMassTransit(x =>
         o.UseBusOutbox();
     });
 
-    x.AddMediator(cfg =>
-    {
-        cfg.AddConsumer<RegistrationSubmitHandler>();
-    });
-
     x.UsingAzureServiceBus((context, cfg) =>
     {
         cfg.Host(builder.Configuration.GetConnectionString("AzureServiceBus"));

@@ -1,7 +1,6 @@
 namespace Sample.Api.Controllers;
 
 using Components;
-using MassTransit.Mediator;
 using Microsoft.AspNetCore.Mvc;
 
 
@@ -10,11 +9,11 @@ using Microsoft.AspNetCore.Mvc;
 public class RegistrationController :
     ControllerBase
 {
-    private readonly IMediator mediator;
+    readonly IRegistrationService _registrationService;
 
-    public RegistrationController(IMediator mediator)
+    public RegistrationController(IRegistrationService registrationService)
     {
-        this.mediator = mediator;
+        _registrationService = registrationService;
     }
 
     [HttpPost]
@@ -25,9 +24,15 @@ public class RegistrationController :
 
         try
         {
-            var requestClient = mediator.CreateRequestClient<RegistrationSubmitRequest>();
-            var response = await requestClient.GetResponse<RegistrationSubmitResponse>(new RegistrationSubmitRequest(model));
-            return Ok(response.Message);
+            var registration = await _registrationService.SubmitRegistration(model.EventId, model.MemberId, model.Payment);
+
+            return Ok(new
+            {
+                registration.RegistrationId,
+                registration.RegistrationDate,
+                registration.MemberId,
+                registration.EventId,
+            });
         }
         catch (DuplicateRegistrationException)
         {
