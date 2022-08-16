@@ -9,6 +9,7 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Sample.Api;
+using Sample.Api.Controllers;
 using Sample.Components;
 using Serilog;
 using Serilog.Events;
@@ -35,17 +36,18 @@ builder.Services.AddDbContext<RegistrationDbContext>(x =>
 {
     var connectionString = builder.Configuration.GetConnectionString("Default");
 
-    x.UseNpgsql(connectionString, options =>
-    {
-        options.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name);
-        options.MigrationsHistoryTable($"__{nameof(RegistrationDbContext)}");
+    x.UseSqlServer(connectionString);
+    //x.UseNpgsql(connectionString, options =>
+    //{
+    //    options.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name);
+    //    options.MigrationsHistoryTable($"__{nameof(RegistrationDbContext)}");
 
-        options.EnableRetryOnFailure(5);
-        options.MinBatchSize(1);
-    });
+    //    options.EnableRetryOnFailure(5);
+    //    options.MinBatchSize(1);
+    //});
 });
 
-builder.Services.AddHostedService<RecreateDatabaseHostedService<RegistrationDbContext>>();
+//builder.Services.AddHostedService<RecreateDatabaseHostedService<RegistrationDbContext>>();
 
 builder.Services.AddOpenTelemetryTracing(x =>
 {
@@ -76,14 +78,25 @@ builder.Services.AddMassTransit(x =>
     {
         o.QueryDelay = TimeSpan.FromSeconds(1);
 
-        o.UsePostgres();
+        o.UseSqlServer();
+        //o.UsePostgres();
         o.UseBusOutbox();
     });
 
-    x.UsingRabbitMq((_, cfg) =>
+    x.AddMediator(cfg =>
     {
-        cfg.AutoStart = true;
+        cfg.AddConsumer<RegistrationSubmitHandler>();
     });
+
+    x.UsingAzureServiceBus((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration.GetConnectionString("AzureServiceBus"));
+    });
+
+    //x.UsingRabbitMq((_, cfg) =>
+    //{
+    //    cfg.AutoStart = true;
+    //});
 });
 
 builder.Services.AddEndpointsApiExplorer();

@@ -10,7 +10,7 @@ using StateMachines;
 public class RegistrationDbContext :
     SagaDbContext
 {
-    public RegistrationDbContext(DbContextOptions<RegistrationDbContext> options)
+    public RegistrationDbContext(DbContextOptions<RegistrationDbContext> options, IPublishEndpoint publishEndpoint)
         : base(options)
     {
     }
@@ -18,6 +18,17 @@ public class RegistrationDbContext :
     protected override IEnumerable<ISagaClassMap> Configurations
     {
         get { yield return new RegistrationStateMap(); }
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        // FROM: Microsoft.eShopOnContainers.Services.Ordering.Infrastructure.OrderingContext
+        // Dispatch Domain Events collection. 
+        // A) Right BEFORE committing data (EF SaveChanges) into the DB will make a single transaction including  
+        // side effects from the domain event handlers which are using the same DbContext with "InstancePerLifetimeScope" or "scoped" lifetime
+        //publishEndpoint.DispatchDomainEventsAsync(this, cancellationToken);
+
+        return await base.SaveChangesAsync(cancellationToken);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
